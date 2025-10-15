@@ -232,8 +232,8 @@ class CloudLoggingExporter(LogExporter):
         if event_name and is_log_id_valid(event_name):
             return event_name.replace("/", "%2F")
         return self.default_log_name
-
-    def export(self, batch: Sequence[LogData]):
+    
+    def convert_log_data_to_log_entries(self, batch: Sequence[LogData]) -> Sequence[LogEntry]:
         now = datetime.datetime.now()
         log_entries = []
         for log_data in batch:
@@ -285,8 +285,10 @@ class CloudLoggingExporter(LogExporter):
                 log_entry.labels["event.name"] = log_record.event_name
             _set_payload_in_log_entry(log_entry, log_record.body)
             log_entries.append(log_entry)
+        return log_entries
 
-        self._write_log_entries(log_entries)
+    def export(self, batch: Sequence[LogData]):
+        self._write_log_entries(self.convert_log_data_to_log_entries(batch))
 
     def _write_log_entries(self, log_entries: list[LogEntry]):
         batch: list[LogEntry] = []
