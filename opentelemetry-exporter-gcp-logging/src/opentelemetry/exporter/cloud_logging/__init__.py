@@ -18,6 +18,7 @@ import datetime
 import json
 import logging
 import re
+from typing_extensions import deprecated
 from base64 import b64encode
 from functools import partial
 from typing import (
@@ -254,6 +255,10 @@ def _get_monitored_resource(
     )
 
 
+@deprecated(
+    "CloudLoggingExporter is deprecated. See migration guide at "
+    "https://github.com/GoogleCloudPlatform/opentelemetry-operations-python/blob/main/MIGRATION.md"
+)
 class CloudLoggingExporter(LogRecordExporter):
     def __init__(
         self,

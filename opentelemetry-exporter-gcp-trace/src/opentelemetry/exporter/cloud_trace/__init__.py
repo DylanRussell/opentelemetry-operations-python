@@ -72,6 +72,7 @@ API
 
 import logging
 import re
+from typing_extensions import deprecated
 from collections.abc import Sequence as SequenceABC
 from os import environ
 from typing import (
@@ -152,6 +153,10 @@ def _create_default_client() -> TraceServiceClient:
     )
 
 
+@deprecated(
+    "CloudTraceSpanExporter is deprecated. See migration guide at "
+    "https://github.com/GoogleCloudPlatform/opentelemetry-operations-python/blob/main/MIGRATION.md"
+)
 class CloudTraceSpanExporter(SpanExporter):
     """Cloud Trace span exporter for OpenTelemetry.
 
