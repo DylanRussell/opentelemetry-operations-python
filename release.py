@@ -52,10 +52,9 @@ be overwritten by (b).
 
 # Map of different suffixes to use instead of the given ones in release_version
 ALTERNATE_SUFFIXES = {
-    # Mark monitoring and resource detector alpha
+    # Mark monitoring and logging alpha
     "opentelemetry-exporter-gcp-monitoring": "a0",
     "opentelemetry-exporter-gcp-logging": "a0",
-    "opentelemetry-resourcedetector-gcp": "a0",
 }
 
 
@@ -138,6 +137,8 @@ def create_release_commit(release_version: str,) -> None:
     }
 
     for package_root in repo_root().glob("opentelemetry-*/"):
+        if not (package_root / "CHANGELOG.md").exists():
+            continue
         if package_root in alternate_suffix_paths:
             suffix = alternate_suffix_paths[package_root]
             release_version_use = release_version_parsed.base_version + suffix
