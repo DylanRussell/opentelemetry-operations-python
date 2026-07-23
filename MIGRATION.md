@@ -290,7 +290,7 @@ logger_provider.add_log_record_processor(
 
 #### Conversion Logic & Log Entry Mapping
 
-* **Log Entry Conversion:** `CloudLoggingExporter` translated `LogRecord` objects locally using the Python `google-cloud-logging` client library. The standard OTLP endpoint converts OTLP `LogRecord` payloads server-side according to the [OTLP LogRecord to LogEntry specification](https://docs.cloud.google.com/stackdriver/docs/reference/telemetry/otlp-log-record-to-log-entry).
+* **Log Entry Conversion:** The conversion logic in `CloudLoggingExporter` can be found in [`opentelemetry-exporter-gcp-logging/src/opentelemetry/exporter/cloud_logging/__init__.py`](opentelemetry-exporter-gcp-logging/src/opentelemetry/exporter/cloud_logging/__init__.py#L331-L380). Standard OTLP endpoints convert OTLP `LogRecord` payloads server-side according to the [OTLP LogRecord to LogEntry specification](https://docs.cloud.google.com/stackdriver/docs/reference/telemetry/otlp-log-record-to-log-entry).
 * **Log Names & Resources:** The OTLP endpoint maps log names from resource attributes (e.g. `gcp.log_name` or defaults to `projects/<project>/logs/otel`).
 * **Query Impact:** If your existing Cloud Logging log queries filter by specific `logName` values (such as python logger names mapped by `CloudLoggingExporter`), you may need to update your Cloud Logging query filters to match the OTLP log names and attributes.
 * **GCP Monitored Resource Association:** Installing `opentelemetry-resourcedetector-gcp` ensures log records contain appropriate GCP resource attributes, allowing Cloud Logging to associate logs with standard monitored resources (GCE instances, GKE pods, Cloud Run services, etc.).
