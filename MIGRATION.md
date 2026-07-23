@@ -4,12 +4,25 @@ This guide provides instructions on how to migrate from the custom exporters in 
 
 ## Overview
 
-Google Cloud supports native OTLP (OpenTelemetry Protocol) ingestion for Cloud Trace and Cloud Monitoring via the [Telemetry API](https://docs.cloud.google.com/stackdriver/docs/reference/telemetry/overview). This allows you to use standard OpenTelemetry OTLP exporters for sending telemetry data to Google Cloud.
+Google Cloud supports native OTLP (OpenTelemetry Protocol) ingestion for Cloud Trace, Cloud Monitoring, and Cloud Logging via the [Telemetry API](https://docs.cloud.google.com/stackdriver/docs/reference/telemetry/overview). This allows you to use standard OpenTelemetry OTLP exporters for sending telemetry data to Google Cloud.
 
 ## Deprecation Notice
 
-All exporters in this repository are deprecated. Please migrate to the standard OTLP exporters using standard OpenTelemetry libraries. This repository will be
-archived soon.
+All exporters in this repository (`opentelemetry-exporter-gcp-trace`, `opentelemetry-exporter-gcp-monitoring`, and `opentelemetry-exporter-gcp-logging`) are deprecated. Please migrate to standard OTLP exporters using standard OpenTelemetry libraries.
+
+---
+
+## Resource Detection (Recommended for All Signals)
+
+When migrating to OTLP exporters, installing the GCP Resource Detector package (`opentelemetry-resourcedetector-gcp`) automatically populates Google Cloud resource attributes (such as `gcp.project_id`, `cloud.account.id`, `host.id`, `k8s.pod.name`, etc.) for OpenTelemetry SDK providers (`TracerProvider`, `MeterProvider`, `LoggerProvider`).
+
+### Installation
+
+```bash
+pip install opentelemetry-resourcedetector-gcp
+```
+
+Once installed, the GCP resource detector entrypoint is automatically discovered and loaded by the OpenTelemetry SDK without requiring explicit manual resource setup code.
 
 ---
 
@@ -19,10 +32,10 @@ To migrate from `opentelemetry-exporter-gcp-trace` (`CloudTraceSpanExporter`) to
 
 ### 1. Add Dependencies
 
-Install the standard OpenTelemetry OTLP exporter and GCP authentication dependencies:
+Install the standard OpenTelemetry OTLP exporter, GCP resource detector, and GCP authentication dependencies:
 
 ```bash
-pip install opentelemetry-exporter-otlp-proto-grpc google-auth grpcio requests
+pip install opentelemetry-exporter-otlp-proto-grpc opentelemetry-resourcedetector-gcp google-auth grpcio requests
 ```
 
 ### 2. Configure the SDK
@@ -83,9 +96,14 @@ For more details, follow the official Google Cloud guide: [Migrate from the Trac
 
 | `CloudTraceSpanExporter` Parameter | OTLP Equivalent Property / Env Var | Notes |
 | :--- | :--- | :--- |
-| `project_id` | Use resource attribute: `gcp.project_id` | Set via `OTEL_RESOURCE_ATTRIBUTES="gcp.project_id=your-project-id"`. |
-| `client` | N/A | Pre-configured `TraceServiceClient` is replaced by HTTP/gRPC OTLP exporter configuration. |
-| `resource_regex` | Resource Attributes / Processors | Use standard OpenTelemetry Resource attributes instead. |
+| `project_id` / `OTEL_EXPORTER_GCP_TRACE_PROJECT_ID` | Resource attribute: `gcp.project_id` | Set via `OTEL_RESOURCE_ATTRIBUTES="gcp.project_id=your-project-id"` or detected automatically via `opentelemetry-resourcedetector-gcp`. |
+| `client` | N/A | Pre-configured `TraceServiceClient` is replaced by OTLP gRPC/HTTP channel credentials. |
+| `resource_regex` | Standard Resource Attributes | Standard OpenTelemetry exports resource attributes attached to the `TracerProvider`. Filtering/copying resource attributes via regex is not supported in OTLP. |
+
+#### Unsupported Features
+
+* **Attribute Mapping & Regex Filtering (`resource_regex`)**: `CloudTraceSpanExporter` allowed filtering resource attributes via regex to copy matching keys into span attributes. The standard OTLP exporter exports standard OpenTelemetry resource attributes attached to the `TracerProvider` directly.
+* **Custom Trace Service Client (`client`)**: You cannot pass a pre-configured `TraceServiceClient` instance directly to `OTLPSpanExporter`. If custom gRPC channels or metadata credentials are required, configure gRPC channel credentials programmatically as shown above.
 
 ---
 
@@ -101,17 +119,31 @@ For more details, follow the official Google Cloud guide: [Migrate from the Trac
 
 ### Why Migrate?
 
-Transitioning to the standard OTLP exporter is recommended for the following reasons:
-* **Standardization:** Aligns your application with the industry-standard OpenTelemetry Protocol (OTLP).
-* **Google Managed Prometheus (GMP):** Standard OTLP metrics are ingested into Google Managed Prometheus, offering robust, scalable, and cost-effective monitoring.
-* **Future-proofing:** The legacy Google Cloud exporters in this repository are deprecated.
+While this migration introduces breaking changes, transitioning to the standard OTLP exporter is recommended for the following reasons:
+* **Standardization:** Aligns your application with the industry-standard OpenTelemetry Protocol (OTLP), ensuring vendor neutrality and compatibility with the broader OpenTelemetry ecosystem.
+* **Google Managed Prometheus (GMP) Cost Savings:** Standard OTLP metrics are ingested into Google Managed Prometheus. GMP offers a robust, scalable, and cost-effective monitoring solution (~20x cheaper ingestion cost than legacy Cloud Monitoring API ingestion).
+* **Future-proofing:** The legacy Google Cloud Monitoring exporter is deprecated. Migrating now ensures your monitoring pipeline remains supported.
 
-### Strategy & Steps
+---
+
+### Migration Strategies
+
+We recommend three paths for migration, depending on your operational requirements:
+
+1. **Direct Migration (Recommended):** Migrate fully to the OTLP exporter and update your dashboards and alerts to use the new metric names under the `prometheus.googleapis.com/` domain.
+2. **Transition via Double-Writing (Alternative):** Run both the legacy exporter and the OTLP exporter in parallel. This allows you to validate the new OTLP pipeline and update dashboards/alerts without any monitoring downtime, at the cost of temporary double-ingestion charges.
+3. **Custom Metric Renaming / View Configuration (Alternative):** Use OpenTelemetry SDK Views or metric processors (or OpenTelemetry Collector relabeling) to map metric names and attributes, allowing you to maintain compatibility with existing dashboards.
+
+---
+
+### Strategy 1: Direct Migration (Recommended)
+
+Follow these steps to fully transition to the standard OTLP exporter.
 
 #### 1. Add Dependencies
 
 ```bash
-pip install opentelemetry-exporter-otlp-proto-grpc google-auth grpcio
+pip install opentelemetry-exporter-otlp-proto-grpc opentelemetry-resourcedetector-gcp google-auth grpcio
 ```
 
 #### 2. Configure Environment Variables
@@ -158,26 +190,36 @@ provider = MeterProvider(metric_readers=[reader])
 metrics.set_meter_provider(provider)
 ```
 
+### Mapping and Limitations
+
+#### Configuration Mapping
+
+| `CloudMonitoringMetricsExporter` Parameter | OTLP Equivalent Property / Env Var | Notes |
+| :--- | :--- | :--- |
+| `prefix` (default `workload.googleapis.com`) | N/A | Legacy exporter ingested under `workload.googleapis.com/` (or custom prefix). OTLP exporter ingests into Google Managed Prometheus under `prometheus.googleapis.com/` by default. |
+| `add_unique_identifier` | Resource Attributes (e.g. `service.instance.id`, `host.id`) | Legacy exporter appended a random identifier to time series. OTLP relies on standard OpenTelemetry resource attributes to distinguish instances. |
+| `project_id` | Resource attribute: `gcp.project_id` | Set via `OTEL_RESOURCE_ATTRIBUTES="gcp.project_id=your-project-id"` or detected automatically via `opentelemetry-resourcedetector-gcp`. |
+| `client` | N/A | Pre-configured `MetricServiceClient` cannot be passed directly to `OTLPMetricExporter`. |
+
+#### Limitations & Breaking Changes
+
+* **Metric Domain & Prefix:** Metric names in Cloud Monitoring will change from `workload.googleapis.com/<metric>` to `prometheus.googleapis.com/<metric>/<type>`. Existing Cloud Monitoring dashboards and alerts relying on `workload.googleapis.com/` metrics must be updated to query `prometheus.googleapis.com/` metrics.
+* **Unique Identifier Handling:** The `add_unique_identifier` parameter in `CloudMonitoringMetricsExporter` is not supported. Use standard resource attributes like `service.instance.id` or `host.id` to separate metric streams from distinct exporter instances.
+
 ---
 
 ## Migrate from OpenTelemetry Google Cloud Logging Exporter (`CloudLoggingExporter`) to OTLP Exporter
 
-The OTLP `LogRecord` to Cloud Logging `LogEntry` conversion logic in the `CloudLoggingExporter` is similar but not identical to the Google OTLP endpoint conversion logic. 
-
-The Google OTLP endpoint `LogRecord` to Cloud Logging `LogEntry` conversion logic is described here: https://docs.cloud.google.com/stackdriver/docs/reference/telemetry/otlp-log-record-to-log-entry.
-
-The conversion logic in the `CloudLoggingExporter` can be found here: https://github.com/GoogleCloudPlatform/opentelemetry-operations-python/blob/main/opentelemetry-exporter-gcp-logging/src/opentelemetry/exporter/cloud_logging/__init__.py.
-
-You can send the same OTLP `LogRecord` to the Google OTLP endpoint and to Cloud Logging via the `CloudLoggingExporter` to see exactly how the conversion logic diverges for a particular log if at all.
+The OTLP `LogRecord` to Cloud Logging `LogEntry` conversion logic in standard OTLP endpoints is described in the [Google OTLP LogRecord to LogEntry specification](https://docs.cloud.google.com/stackdriver/docs/reference/telemetry/otlp-log-record-to-log-entry).
 
 To migrate from `opentelemetry-exporter-gcp-logging` (`CloudLoggingExporter`) to the standard OpenTelemetry OTLP log exporter, follow these steps:
 
 ### 1. Add Dependencies
 
-Install the standard OpenTelemetry OTLP exporter package:
+Install the standard OpenTelemetry OTLP log exporter package and GCP resource detector:
 
 ```bash
-pip install opentelemetry-exporter-otlp-proto-grpc google-auth grpcio
+pip install opentelemetry-exporter-otlp-proto-grpc opentelemetry-resourcedetector-gcp google-auth grpcio
 ```
 
 ### 2. Configure Environment Variables
@@ -227,3 +269,12 @@ logger_provider.add_log_record_processor(
     BatchLogRecordProcessor(otlp_log_exporter)
 )
 ```
+
+### Mapping and Limitations
+
+#### Conversion Logic & Log Entry Mapping
+
+* **Log Entry Conversion:** `CloudLoggingExporter` translated `LogRecord` objects locally using the Python `google-cloud-logging` client library. The standard OTLP endpoint converts OTLP `LogRecord` payloads server-side according to the [OTLP LogRecord to LogEntry specification](https://docs.cloud.google.com/stackdriver/docs/reference/telemetry/otlp-log-record-to-log-entry).
+* **Log Names & Resources:** The OTLP endpoint maps log names from resource attributes (e.g. `gcp.log_name` or defaults to `projects/<project>/logs/otel`).
+* **Query Impact:** If your existing Cloud Logging log queries filter by specific `logName` values (such as python logger names mapped by `CloudLoggingExporter`), you may need to update your Cloud Logging query filters to match the OTLP log names and attributes.
+* **GCP Monitored Resource Association:** Installing `opentelemetry-resourcedetector-gcp` ensures log records contain appropriate GCP resource attributes, allowing Cloud Logging to associate logs with standard monitored resources (GCE instances, GKE pods, Cloud Run services, etc.).
