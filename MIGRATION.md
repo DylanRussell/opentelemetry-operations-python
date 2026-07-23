@@ -14,7 +14,7 @@ All exporters in this repository (`opentelemetry-exporter-gcp-trace`, `opentelem
 
 ## Resource Detection (Recommended for All Signals)
 
-When migrating to OTLP exporters, installing the GCP Resource Detector package (`opentelemetry-resourcedetector-gcp`) automatically populates Google Cloud resource attributes (such as `gcp.project_id`, `cloud.account.id`, `host.id`, `k8s.pod.name`, etc.) for OpenTelemetry SDK providers (`TracerProvider`, `MeterProvider`, `LoggerProvider`).
+When migrating to OTLP exporters, using the GCP Resource Detector package (`opentelemetry-resourcedetector-gcp`) automatically populates Google Cloud resource attributes (such as `gcp.project_id`, `cloud.account.id`, `host.id`, `k8s.pod.name`, etc.) for OpenTelemetry SDK providers (`TracerProvider`, `MeterProvider`, `LoggerProvider`).
 
 ### Installation
 
@@ -22,7 +22,21 @@ When migrating to OTLP exporters, installing the GCP Resource Detector package (
 pip install opentelemetry-resourcedetector-gcp
 ```
 
-Once installed, the GCP resource detector entrypoint is automatically discovered and loaded by the OpenTelemetry SDK without requiring explicit manual resource setup code.
+### Configuration via Environment Variable
+
+When using OpenTelemetry autoconfiguration (`opentelemetry-sdk-extension-autoconfigure` or zero-code `opentelemetry-instrument`), enable the GCP resource detector via the `OTEL_EXPERIMENTAL_RESOURCE_DETECTORS` environment variable:
+
+```bash
+export OTEL_EXPERIMENTAL_RESOURCE_DETECTORS="gcp"
+```
+
+You can also specify additional resource attributes via `OTEL_RESOURCE_ATTRIBUTES`:
+
+```bash
+export OTEL_RESOURCE_ATTRIBUTES="gcp.project_id=your-project-id,service.name=my-service"
+```
+
+Once installed and configured, the GCP resource detector entrypoint is automatically discovered and loaded by the OpenTelemetry SDK without requiring explicit manual resource setup code.
 
 ---
 
@@ -47,6 +61,7 @@ You can configure the SDK using environment variables:
 export OTEL_EXPORTER_OTLP_ENDPOINT="https://telemetry.googleapis.com"
 export OTEL_TRACES_EXPORTER="otlp"
 export OTEL_EXPORTER_OTLP_PROTOCOL="http/protobuf"
+export OTEL_EXPERIMENTAL_RESOURCE_DETECTORS="gcp"
 ```
 
 Or programmatically in Python using GCP authentication:
@@ -152,6 +167,7 @@ pip install opentelemetry-exporter-otlp-proto-grpc opentelemetry-resourcedetecto
 export OTEL_EXPORTER_OTLP_ENDPOINT="https://telemetry.googleapis.com"
 export OTEL_METRICS_EXPORTER="otlp"
 export OTEL_EXPORTER_OTLP_PROTOCOL="http/protobuf"
+export OTEL_EXPERIMENTAL_RESOURCE_DETECTORS="gcp"
 export OTEL_RESOURCE_ATTRIBUTES="gcp.project_id=$PROJECT_ID,location=us-central1,service.name=otlp-sample,service.instance.id=1"
 ```
 
@@ -228,6 +244,7 @@ pip install opentelemetry-exporter-otlp-proto-grpc opentelemetry-resourcedetecto
 export OTEL_EXPORTER_OTLP_ENDPOINT="https://telemetry.googleapis.com"
 export OTEL_LOGS_EXPORTER="otlp"
 export OTEL_EXPORTER_OTLP_PROTOCOL="http/protobuf"
+export OTEL_EXPERIMENTAL_RESOURCE_DETECTORS="gcp"
 export OTEL_RESOURCE_ATTRIBUTES="gcp.project_id=$PROJECT_ID,service.name=otlp-sample,service.instance.id=1"
 ```
 
