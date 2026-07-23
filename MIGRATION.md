@@ -221,6 +221,29 @@ metrics.set_meter_provider(provider)
 * **Metric Domain & Prefix:** Metric names in Cloud Monitoring will change from `workload.googleapis.com/<metric>` to `prometheus.googleapis.com/<metric>/<type>`. Existing Cloud Monitoring dashboards and alerts relying on `workload.googleapis.com/` metrics must be updated to query `prometheus.googleapis.com/` metrics.
 * **Unique Identifier Handling:** The `add_unique_identifier` parameter in `CloudMonitoringMetricsExporter` is not supported. Use standard resource attributes like `service.instance.id` or `host.id` to separate metric streams from distinct exporter instances.
 
+#### Conversion Logic & Metric Mapping Differences
+
+The conversion logic used in `CloudMonitoringMetricsExporter` can be found in [`opentelemetry-exporter-gcp-monitoring/src/opentelemetry/exporter/cloud_monitoring/__init__.py`](opentelemetry-exporter-gcp-monitoring/src/opentelemetry/exporter/cloud_monitoring/__init__.py#L184-L365). Standard OTLP endpoints convert OTLP metric data server-side according to the [Google Cloud Telemetry API Metric Mapping specification](https://docs.cloud.google.com/stackdriver/docs/reference/telemetry/v1.metrics#metric-mapping-reference-info).
+
+Key differences include:
+
+* **Metric Domain & Name Structure:**
+  - **`CloudMonitoringMetricsExporter`:** Ingests metrics under `workload.googleapis.com/<metric.name>` (or custom `prefix`).
+  - **Telemetry API:** Ingests metrics under `prometheus.googleapis.com/<metric_name>/<suffix>` (e.g. `/counter`, `/gauge`, `/histogram`, `/delta`, `/summary`).
+* **Value Types (`INT64` vs `DOUBLE`):**
+  - **`CloudMonitoringMetricsExporter`:** Preserves `INT64` value types when integer data points are passed (`TypedValue(int64_value=...)`).
+  - **Telemetry API:** Translates **all OTLP `INT64` scalar metrics to `DOUBLE`** in Cloud Monitoring to prevent Monarch value-type schema collisions.
+* **Metric Kind & Temporality:**
+  - Monotonic cumulative sums map to `CUMULATIVE` (suffixed with `/counter`).
+  - Monotonic delta sums map to `DELTA` (suffixed with `/delta`).
+  - Non-monotonic sums map to `GAUGE` (suffixed with `/gauge`). Non-monotonic delta sums are not supported.
+  - Histograms support both `CUMULATIVE` (`/histogram`) and `DELTA` (`/histogram:delta`) distributions.
+  - Summary metrics are expanded into individual time series for `_count` (`CUMULATIVE`), `_sum` (`CUMULATIVE`), and `quantile` (`GAUGE` with a `quantile` label).
+* **Resource Attributes & `target_info` Metric:**
+  - **`CloudMonitoringMetricsExporter`:** Maps OpenTelemetry resources to GCP `MonitoredResource` on the client side using `get_monitored_resource()`. Optionally appends a random `opentelemetry_id` label when `add_unique_identifier=True`.
+  - **Telemetry API:** Maps resources server-side and automatically generates a `target_info` metric for each unique OpenTelemetry resource containing non-identifying resource attributes.
+* **Special Characters:** The Telemetry API preserves `.` and `/` characters in OTLP metric names rather than replacing them with underscores (`_`).
+
 ---
 
 ## Migrate from OpenTelemetry Google Cloud Logging Exporter (`CloudLoggingExporter`) to OTLP Exporter
