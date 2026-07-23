@@ -225,7 +225,8 @@ metrics.set_meter_provider(provider)
 
 ## Migrate from OpenTelemetry Google Cloud Logging Exporter (`CloudLoggingExporter`) to OTLP Exporter
 
-The OTLP `LogRecord` to Cloud Logging `LogEntry` conversion logic in standard OTLP endpoints is described in the [Google OTLP LogRecord to LogEntry specification](https://docs.cloud.google.com/stackdriver/docs/reference/telemetry/otlp-log-record-to-log-entry).
+The OTLP `LogRecord` to Cloud Logging `LogEntry` conversion logic in standard OTLP endpoints is described in the [Google OTLP LogRecord to LogEntry specification](https://docs.cloud.google.com/stackdriver/docs/reference/telemetry/otlp-log-record-to-log-entry). The conversion logic used in `CloudLoggingExporter` can be found in [`opentelemetry-exporter-gcp-logging/src/opentelemetry/exporter/cloud_logging/__init__.py`](opentelemetry-exporter-gcp-logging/src/opentelemetry/exporter/cloud_logging/__init__.py#L331-L380) and is different in some ways, you should not expect
+the format of the log to look exactly the same after switching over. 
 
 To migrate from `opentelemetry-exporter-gcp-logging` (`CloudLoggingExporter`) to the standard OpenTelemetry OTLP log exporter, follow these steps:
 
