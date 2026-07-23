@@ -14,7 +14,7 @@ All exporters in this repository (`opentelemetry-exporter-gcp-trace`, `opentelem
 
 ## Resource Detection (Recommended for All Signals)
 
-When migrating to OTLP exporters, using the GCP Resource Detector package (`opentelemetry-resourcedetector-gcp`) automatically populates Google Cloud resource attributes (such as `gcp.project_id`, `cloud.account.id`, `host.id`, `k8s.pod.name`, etc.) for OpenTelemetry SDK providers (`TracerProvider`, `MeterProvider`, `LoggerProvider`).
+When migrating to OTLP exporters, installing the GCP Resource Detector package (`opentelemetry-resourcedetector-gcp`) automatically populates Google Cloud resource attributes (such as `gcp.project_id`, `cloud.account.id`, `host.id`, `k8s.pod.name`, etc.) for OpenTelemetry SDK providers (`TracerProvider`, `MeterProvider`, `LoggerProvider`).
 
 ### Installation
 
@@ -22,9 +22,10 @@ When migrating to OTLP exporters, using the GCP Resource Detector package (`open
 pip install opentelemetry-resourcedetector-gcp
 ```
 
-### Configuration via Environment Variable
+### Usage & Configuration
 
-When using OpenTelemetry autoconfiguration (`opentelemetry-sdk-extension-autoconfigure` or zero-code `opentelemetry-instrument`), enable the GCP resource detector via the `OTEL_EXPERIMENTAL_RESOURCE_DETECTORS` environment variable:
+* **Manual SDK Setup (In Code):** When manually setting up the SDK in Python (e.g., instantiating `TracerProvider()`, `MeterProvider()`, or `LoggerProvider()`), the GCP resource detector is **automatically discovered and applied** simply by installing `opentelemetry-resourcedetector-gcp`. No additional code changes or environment variables are required.
+* **Autoconfiguration / Zero-Code Instrumentation:** When using OpenTelemetry autoconfiguration (`opentelemetry-sdk-extension-autoconfigure` or `opentelemetry-instrument`), enable the GCP resource detector via the `OTEL_EXPERIMENTAL_RESOURCE_DETECTORS` environment variable:
 
 ```bash
 export OTEL_EXPERIMENTAL_RESOURCE_DETECTORS="gcp"
@@ -35,8 +36,6 @@ You can also specify additional resource attributes via `OTEL_RESOURCE_ATTRIBUTE
 ```bash
 export OTEL_RESOURCE_ATTRIBUTES="gcp.project_id=your-project-id,service.name=my-service"
 ```
-
-Once installed and configured, the GCP resource detector entrypoint is automatically discovered and loaded by the OpenTelemetry SDK without requiring explicit manual resource setup code.
 
 ---
 
