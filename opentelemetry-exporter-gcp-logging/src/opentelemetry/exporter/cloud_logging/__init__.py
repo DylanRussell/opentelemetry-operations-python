@@ -70,7 +70,6 @@ from proto.datetime_helpers import (  # type: ignore[import]
 )
 from typing_extensions import deprecated  # type: ignore[attr-defined]
 
-
 DEFAULT_MAX_ENTRY_SIZE = 256000  # 256 KB
 DEFAULT_MAX_REQUEST_SIZE = 10000000  # 10 MB
 
