@@ -27,6 +27,7 @@ steps:
         --no-deps \
         --wheel-dir wheels \
         ../opentelemetry-exporter-gcp-trace/ \
+        ../opentelemetry-resourcedetector-gcp/ \
         ../opentelemetry-propagator-gcp
 
       zip -qr appsource.zip .

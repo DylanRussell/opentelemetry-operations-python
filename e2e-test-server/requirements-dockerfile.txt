@@ -2,4 +2,4 @@
 -r requirements-shared.txt
 ../opentelemetry-exporter-gcp-trace
 ../opentelemetry-propagator-gcp
-opentelemetry-resourcedetector-gcp
+../opentelemetry-resourcedetector-gcp

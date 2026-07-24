@@ -1,7 +1,7 @@
 -e ../../../opentelemetry-exporter-gcp-monitoring
 -e ../../../opentelemetry-exporter-gcp-trace
 -e ../../../opentelemetry-propagator-gcp
-opentelemetry-resourcedetector-gcp
+-e ../../../opentelemetry-resourcedetector-gcp
 flask
 opentelemetry-api
 opentelemetry-instrumentation-flask

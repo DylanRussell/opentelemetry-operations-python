@@ -13,6 +13,7 @@ API Reference
 
       opentelemetry.exporter
       opentelemetry.propagators.cloud_trace_propagator
+      opentelemetry.resourcedetector
 
 
 .. toctree::
@@ -22,3 +23,4 @@ API Reference
 
    _autosummary/opentelemetry.exporter
    _autosummary/opentelemetry.propagators.cloud_trace_propagator
+   _autosummary/opentelemetry.resourcedetector
