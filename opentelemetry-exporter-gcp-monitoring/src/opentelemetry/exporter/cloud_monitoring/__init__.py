@@ -19,7 +19,6 @@ from dataclasses import replace
 from time import time_ns
 from typing import Dict, List, NoReturn, Optional, Set, Union
 
-
 import google.auth
 from google.api.distribution_pb2 import (  # pylint: disable=no-name-in-module
     Distribution,

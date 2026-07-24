@@ -74,7 +74,6 @@ import logging
 import re
 from collections.abc import Sequence as SequenceABC
 from os import environ
-
 from typing import (
     Any,
     Dict,
