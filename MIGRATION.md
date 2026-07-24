@@ -121,7 +121,8 @@ For more details, follow the official Google Cloud guide: [Migrate from the Trac
 
 #### Data Model differences & Data Limit Improvements
 
-Cloud Trace’s internal storage system uses the OpenTelemetry data model natively for organizing and storing your trace data.
+Cloud Trace’s internal storage system uses the OpenTelemetry data model natively for organizing and storing your trace data. For complete documentation on OTLP trace mapping and limits, see [Migrate from the Trace exporter to the OTLP endpoint](https://cloud.google.com/trace/docs/migrate-to-otlp-endpoints).
+
 
 ##### Data Model Comparison
 
@@ -134,17 +135,7 @@ Cloud Trace’s internal storage system uses the OpenTelemetry data model native
 
 ##### Expanded Limits Comparison
 
-| Limit / Metric | `CloudTraceSpanExporter` (API v2) | OTLP Exporter / Native OTel Storage |
-| :--- | :--- | :--- |
-| **Span Name Length** | Capped at **128 bytes** | Up to **1,024 bytes** (1 KiB) |
-| **Attributes Per Span** | Hard limit of **32 attributes** | Up to **1,024 attributes** per span |
-| **Attribute Key Size** | Capped at **128 bytes** | Up to **512 bytes** |
-| **Attribute Value Size** | Truncated to **256 bytes** | Up to **64 KiB** |
-| **Events Per Span** | Capped at **32 events** | Up to **256 events** per span |
-| **Links Per Span** | Capped at **128 links** | Up to **128 links** per span |
-| **Truncation Processing** | **Client-side:** Pre-emptively truncates keys/values and drops attributes in Python SDK code. | **Server-side:** Transmits raw OTLP payloads natively without client-side truncation. |
-
----
+For complete documentation on OTLP trace mapping and limits, see [Migrate from the Trace exporter to the OTLP endpoint](https://cloud.google.com/trace/docs/migrate-to-otlp-endpoints).
 
 ## Migrate from OpenTelemetry Google Cloud Monitoring Exporter (`CloudMonitoringMetricsExporter`) to OTLP Exporter
 
@@ -230,6 +221,156 @@ provider = MeterProvider(metric_readers=[reader])
 metrics.set_meter_provider(provider)
 ```
 
+### Strategy 2: Transition via Double-Writing
+
+To avoid monitoring gaps, run both the legacy exporter (`CloudMonitoringMetricsExporter`) and the standard OTLP exporter (`OTLPMetricExporter`) concurrently. This sends metrics to both `workload.googleapis.com/` and `prometheus.googleapis.com/` simultaneously, allowing you to update dashboards and alerting policies without any monitoring downtime.
+
+> [!NOTE]
+> **Cost Consideration:**  Double-writing metrics will double your metric ingestion volume, which will increase your Google Cloud Monitoring costs during the transition period. It also increases CPU and memory usage on your application.
+
+```python
+import google.auth
+import google.auth.transport.grpc
+import google.auth.transport.requests
+import grpc
+from google.auth.transport.grpc import AuthMetadataPlugin
+from opentelemetry import metrics
+from opentelemetry.exporter.cloud_monitoring import (
+    CloudMonitoringMetricsExporter,
+)
+from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
+    OTLPMetricExporter,
+)
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+
+credentials, project_id = google.auth.default()
+request = google.auth.transport.requests.Request()
+auth_metadata_plugin = AuthMetadataPlugin(
+    credentials=credentials, request=request
+)
+channel_creds = grpc.composite_channel_credentials(
+    grpc.ssl_channel_credentials(),
+    grpc.metadata_call_credentials(auth_metadata_plugin),
+)
+
+# 1. Instantiate legacy exporter (writes to workload.googleapis.com/)
+legacy_exporter = CloudMonitoringMetricsExporter(project_id=project_id)
+
+# 2. Instantiate OTLP exporter (writes to prometheus.googleapis.com/)
+otlp_exporter = OTLPMetricExporter(
+    endpoint="telemetry.googleapis.com",
+    credentials=channel_creds,
+)
+
+# 3. Register both readers with MeterProvider
+provider = MeterProvider(
+    metric_readers=[
+        PeriodicExportingMetricReader(legacy_exporter),
+        PeriodicExportingMetricReader(otlp_exporter),
+    ]
+)
+metrics.set_meter_provider(provider)
+```
+
+#### Verification and Cutover
+
+1. **Verify New Metrics Ingestion:** Once double-writing is deployed, verify in Metrics Explorer that new metrics are arriving under the `prometheus.googleapis.com/` domain.
+2. **Update Dashboards & Alerts:** Duplicate or update existing Cloud Monitoring dashboards, charts, and alerting policies to query `prometheus.googleapis.com/` metric names instead of `workload.googleapis.com/`.
+3. **Cutover & Decommission:** Once all dashboards and alerting rules are updated and verified against the new OTLP metric data streams, remove `CloudMonitoringMetricsExporter` from your `MeterProvider` to complete the migration and eliminate double-ingestion.
+
+### Strategy 3: Custom Metric Prefixing / Wrapped Exporter
+
+If you want to preserve legacy metric prefixes (such as `workload.googleapis.com/`) during migration, wrap your `MetricExporter` with a custom exporter wrapper that prepends the prefix to metric names before export.
+
+```python
+from opentelemetry import metrics
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import (
+    MetricExporter,
+    MetricExportResult,
+    MetricsData,
+    ResourceMetrics,
+    ScopeMetrics,
+    Metric,
+    PeriodicExportingMetricReader,
+)
+
+
+class PrefixMetricExporter(MetricExporter):
+    """Wraps a MetricExporter to prepend a prefix to metric names before export."""
+
+    def __init__(
+        self,
+        delegate: MetricExporter,
+        prefix: str = "workload.googleapis.com/",
+    ):
+        super().__init__(
+            preferred_temporality=getattr(delegate, "_preferred_temporality", None),
+            preferred_aggregation=getattr(delegate, "_preferred_aggregation", None),
+        )
+        self._delegate = delegate
+        self._prefix = prefix
+
+    def export(
+        self,
+        metrics_data: MetricsData,
+        timeout_millis: float = 10_000,
+        **kwargs,
+    ) -> MetricExportResult:
+        new_resource_metrics = []
+        for rm in metrics_data.resource_metrics:
+            new_scope_metrics = []
+            for sm in rm.scope_metrics:
+                new_metrics = []
+                for m in sm.metrics:
+                    new_metrics.append(
+                        Metric(
+                            name=f"{self._prefix}{m.name}",
+                            description=m.description,
+                            unit=m.unit,
+                            data=m.data,
+                        )
+                    )
+                new_scope_metrics.append(
+                    ScopeMetrics(
+                        scope=sm.scope,
+                        metrics=new_metrics,
+                        schema_url=sm.schema_url,
+                    )
+                )
+            new_resource_metrics.append(
+                ResourceMetrics(
+                    resource=rm.resource,
+                    scope_metrics=new_scope_metrics,
+                    schema_url=rm.schema_url,
+                )
+            )
+        new_metrics_data = MetricsData(resource_metrics=new_resource_metrics)
+        return self._delegate.export(
+            new_metrics_data, timeout_millis=timeout_millis, **kwargs
+        )
+
+    def shutdown(self, timeout_millis: float = 30_000, **kwargs) -> None:
+        self._delegate.shutdown(timeout_millis=timeout_millis, **kwargs)
+
+    def force_flush(self, timeout_millis: float = 10_000, **kwargs) -> bool:
+        return self._delegate.force_flush(timeout_millis=timeout_millis, **kwargs)
+
+
+# Wrap the OTLPMetricExporter with the prefix exporter
+exporter = PrefixMetricExporter(
+    delegate=otlp_exporter,
+    prefix="workload.googleapis.com/",
+)
+
+provider = MeterProvider(
+    metric_readers=[PeriodicExportingMetricReader(exporter)],
+)
+metrics.set_meter_provider(provider)
+```
+
+
 ### Mapping and Limitations
 
 #### Configuration Mapping
@@ -241,11 +382,6 @@ metrics.set_meter_provider(provider)
 | `project_id` | Resource attribute: `gcp.project_id` | Set via `OTEL_RESOURCE_ATTRIBUTES="gcp.project_id=your-project-id"` or detected automatically via `opentelemetry-resourcedetector-gcp`. |
 | `client` | N/A | Pre-configured `MetricServiceClient` cannot be passed directly to `OTLPMetricExporter`. |
 
-#### Limitations & Breaking Changes
-
-* **Metric Domain & Prefix:** Metric names in Cloud Monitoring will change from `workload.googleapis.com/<metric>` to `prometheus.googleapis.com/<metric>/<type>`. Existing Cloud Monitoring dashboards and alerts relying on `workload.googleapis.com/` metrics must be updated to query `prometheus.googleapis.com/` metrics.
-* **Unique Identifier Handling:** The `add_unique_identifier` parameter in `CloudMonitoringMetricsExporter` is not supported. Use standard resource attributes like `service.instance.id` or `host.id` to separate metric streams from distinct exporter instances.
-
 #### Conversion Logic & Metric Mapping Differences
 
 The conversion logic used in `CloudMonitoringMetricsExporter` can be found in [`opentelemetry-exporter-gcp-monitoring/src/opentelemetry/exporter/cloud_monitoring/__init__.py`](opentelemetry-exporter-gcp-monitoring/src/opentelemetry/exporter/cloud_monitoring/__init__.py#L184-L365). Standard OTLP endpoints convert OTLP metric data server-side according to the [Google Cloud Telemetry API Metric Mapping specification](https://docs.cloud.google.com/stackdriver/docs/reference/telemetry/v1.metrics#metric-mapping-reference-info).
@@ -254,7 +390,7 @@ Key differences include:
 
 * **Metric Domain & Name Structure:**
   - **`CloudMonitoringMetricsExporter`:** Ingests metrics under `workload.googleapis.com/<metric.name>` (or custom `prefix`).
-  - **Telemetry API:** Ingests metrics under `prometheus.googleapis.com/<metric_name>/<suffix>` (e.g. `/counter`, `/gauge`, `/histogram`, `/delta`, `/summary`).
+  - **Telemetry API:** Ingests metrics under `prometheus.googleapis.com/<metric_name>/<suffix>` (e.g. `/counter`, `/gauge`, `/histogram`, `/delta`, `/summary`). You can override the prefix to `workload.googleapis.com/` or `custom.google.com/` using the strategies mentioned above, but no other prefix is accepted by the API.
 * **Value Types (`INT64` vs `DOUBLE`):**
   - **`CloudMonitoringMetricsExporter`:** Preserves `INT64` value types when integer data points are passed (`TypedValue(int64_value=...)`).
   - **Telemetry API:** Translates **all OTLP `INT64` scalar metrics to `DOUBLE`** in Cloud Monitoring to prevent Monarch value-type schema collisions.
