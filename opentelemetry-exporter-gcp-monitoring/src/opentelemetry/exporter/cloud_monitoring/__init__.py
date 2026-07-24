@@ -65,6 +65,7 @@ from opentelemetry.sdk.metrics.export import (
     Metric,
     MetricExporter,
     MetricExportResult,
+    MetricsData,
     NumberDataPoint,
     Sum,
 )
