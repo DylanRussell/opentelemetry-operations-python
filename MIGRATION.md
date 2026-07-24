@@ -119,6 +119,31 @@ For more details, follow the official Google Cloud guide: [Migrate from the Trac
 * **Attribute Mapping & Regex Filtering (`resource_regex`)**: `CloudTraceSpanExporter` allowed filtering resource attributes via regex to copy matching keys into span attributes. The standard OTLP exporter exports standard OpenTelemetry resource attributes attached to the `TracerProvider` directly.
 * **Custom Trace Service Client (`client`)**: You cannot pass a pre-configured `TraceServiceClient` instance directly to `OTLPSpanExporter`. If custom gRPC channels or metadata credentials are required, configure gRPC channel credentials programmatically as shown above.
 
+#### Data Model differences & Data Limit Improvements
+
+Cloud Trace’s internal storage system uses the OpenTelemetry data model natively for organizing and storing your trace data.
+
+##### Data Model Comparison
+
+* **Payload Hierarchy & Resource Model:**
+  - **`CloudTraceSpanExporter` (API v2):** Sent a flat list of `Span` objects (`BatchWriteSpansRequest`). Because Cloud Trace v2 spans had no native resource container, resource attributes were flattened on the client side into span labels prefixed with `g.co/r/<resource_type>/<label_key>`.
+  - **OTLP Exporter (Native OTel Storage Model):** Uses the structured OTLP hierarchy (`ExportTraceServiceRequest` → `ResourceSpans` → `ScopeSpans` → `Span`). Resource attributes (`gcp.project_id`, `host.id`, `k8s.pod.name`, etc.) are stored natively in the `ResourceSpans` envelope and mapped server-side.
+* **Attribute Keys & Semantic Conventions:**
+  - **`CloudTraceSpanExporter`:** Performed client-side remapping of OpenTelemetry HTTP keys to legacy Cloud Trace `/http/` label keys (e.g., `http.method` → `/http/method`, `http.status_code` → `/http/status_code`).
+  - **OTLP Exporter:** Preserves standard OpenTelemetry semantic convention keys (e.g., `http.request.method`, `http.response.status_code`, `url.full`) verbatim, stored and indexed natively in Cloud Trace.
+
+##### Expanded Limits Comparison
+
+| Limit / Metric | `CloudTraceSpanExporter` (API v2) | OTLP Exporter / Native OTel Storage |
+| :--- | :--- | :--- |
+| **Span Name Length** | Capped at **128 bytes** | Up to **1,024 bytes** (1 KiB) |
+| **Attributes Per Span** | Hard limit of **32 attributes** | Up to **1,024 attributes** per span |
+| **Attribute Key Size** | Capped at **128 bytes** | Up to **512 bytes** |
+| **Attribute Value Size** | Truncated to **256 bytes** | Up to **64 KiB** |
+| **Events Per Span** | Capped at **32 events** | Up to **256 events** per span |
+| **Links Per Span** | Capped at **128 links** | Up to **128 links** per span |
+| **Truncation Processing** | **Client-side:** Pre-emptively truncates keys/values and drops attributes in Python SDK code. | **Server-side:** Transmits raw OTLP payloads natively without client-side truncation. |
+
 ---
 
 ## Migrate from OpenTelemetry Google Cloud Monitoring Exporter (`CloudMonitoringMetricsExporter`) to OTLP Exporter
