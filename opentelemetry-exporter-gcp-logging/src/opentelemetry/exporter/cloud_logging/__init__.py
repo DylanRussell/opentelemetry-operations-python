@@ -18,7 +18,6 @@ import datetime
 import json
 import logging
 import re
-from typing_extensions import deprecated
 from base64 import b64encode
 from functools import partial
 from typing import (
@@ -69,6 +68,8 @@ from opentelemetry.util.types import AnyValue
 from proto.datetime_helpers import (  # type: ignore[import]
     DatetimeWithNanoseconds,
 )
+from typing_extensions import deprecated  # type: ignore[attr-defined]
+
 
 DEFAULT_MAX_ENTRY_SIZE = 256000  # 256 KB
 DEFAULT_MAX_REQUEST_SIZE = 10000000  # 10 MB

@@ -72,9 +72,9 @@ API
 
 import logging
 import re
-from typing_extensions import deprecated
 from collections.abc import Sequence as SequenceABC
 from os import environ
+
 from typing import (
     Any,
     Dict,
@@ -120,6 +120,7 @@ from opentelemetry.sdk.util import BoundedDict
 from opentelemetry.trace import format_span_id, format_trace_id
 from opentelemetry.trace.status import StatusCode
 from opentelemetry.util import types
+from typing_extensions import deprecated  # type: ignore[attr-defined]
 
 logger = logging.getLogger(__name__)
 

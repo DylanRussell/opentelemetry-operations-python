@@ -67,7 +67,6 @@ class TestCloudTraceSpanExporter(unittest.TestCase):
         with self.assertWarns(DeprecationWarning):
             CloudTraceSpanExporter(project_id=self.project_id)
 
-
     @classmethod
     def setUpClass(cls):
         cls.project_id = "PROJECT"

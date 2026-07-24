@@ -451,7 +451,6 @@ def test_structured_json_lines():
 def test_deprecation_warning():
     buf = StringIO()
     with pytest.deprecated_call():
-        CloudLoggingExporter(
-            project_id=PROJECT_ID, structured_json_file=buf
-        )
+        CloudLoggingExporter(project_id=PROJECT_ID, structured_json_file=buf)
+
 

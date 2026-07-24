@@ -15,10 +15,10 @@
 import logging
 import math
 import random
-from typing_extensions import deprecated
 from dataclasses import replace
 from time import time_ns
 from typing import Dict, List, NoReturn, Optional, Set, Union
+
 
 import google.auth
 from google.api.distribution_pb2 import (  # pylint: disable=no-name-in-module
@@ -65,10 +65,10 @@ from opentelemetry.sdk.metrics.export import (
     Metric,
     MetricExporter,
     MetricExportResult,
-    MetricsData,
     NumberDataPoint,
     Sum,
 )
+from typing_extensions import deprecated  # type: ignore[attr-defined]
 
 logger = logging.getLogger(__name__)
 MAX_BATCH_WRITE = 200
