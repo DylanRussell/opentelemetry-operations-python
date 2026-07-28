@@ -9,6 +9,14 @@ for Google Cloud Platform.
 To get started with instrumentation in Google Cloud, see [Generate traces and metrics with
 Python](https://cloud.google.com/stackdriver/docs/instrumentation/setup/python).
 
+## ⚠️ Deprecation Notice
+
+**All custom Google Cloud exporters in this repository (`opentelemetry-exporter-gcp-trace`, `opentelemetry-exporter-gcp-monitoring`, and `opentelemetry-exporter-gcp-logging`) are deprecated.**
+
+Google Cloud supports native OpenTelemetry Protocol (OTLP) ingestion for Cloud Trace, Cloud Monitoring, and Cloud Logging via the [Telemetry API](https://docs.cloud.google.com/stackdriver/docs/reference/telemetry/overview).
+
+Please refer to the [Migration Guide](MIGRATION.md) for detailed instructions on migrating your application to standard OpenTelemetry OTLP exporters.
+
 ## Documentation
 
 To learn more about instrumentation and observability, including opinionated recommendations

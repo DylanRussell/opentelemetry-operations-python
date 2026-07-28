@@ -119,6 +119,7 @@ from opentelemetry.sdk.util import BoundedDict
 from opentelemetry.trace import format_span_id, format_trace_id
 from opentelemetry.trace.status import StatusCode
 from opentelemetry.util import types
+from typing_extensions import deprecated  # type: ignore[attr-defined]
 
 logger = logging.getLogger(__name__)
 
@@ -152,6 +153,10 @@ def _create_default_client() -> TraceServiceClient:
     )
 
 
+@deprecated(
+    "CloudTraceSpanExporter is deprecated. See migration guide at "
+    "https://github.com/GoogleCloudPlatform/opentelemetry-operations-python/blob/main/MIGRATION.md"
+)
 class CloudTraceSpanExporter(SpanExporter):
     """Cloud Trace span exporter for OpenTelemetry.
 
