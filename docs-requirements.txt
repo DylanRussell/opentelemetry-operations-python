@@ -3,5 +3,6 @@ Sphinx
 sphinx-autodoc-typehints
 -e ./opentelemetry-exporter-gcp-trace
 -e ./opentelemetry-exporter-gcp-monitoring
+-e ./opentelemetry-exporter-gcp-logging
 -e ./opentelemetry-propagator-gcp
--e ./opentelemetry-resourcedetector-gcp
+opentelemetry-resourcedetector-gcp

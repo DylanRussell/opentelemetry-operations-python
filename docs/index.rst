@@ -30,6 +30,11 @@ To learn more about instrumentation and observability, including opinionated rec
 for Google Cloud Observability, visit `Instrumentation and observability
 <https://cloud.google.com/stackdriver/docs/instrumentation/overview>`_.
 
+Google Cloud Resource Detector
+------------------------------
+
+The OpenTelemetry Google Cloud Resource Detector (`opentelemetry-resourcedetector-gcp`) has moved to the `opentelemetry-python-contrib <https://github.com/open-telemetry/opentelemetry-python-contrib/tree/main/resource/opentelemetry-resourcedetector-gcp>`_ repository.
+
 Installation
 ------------
 
