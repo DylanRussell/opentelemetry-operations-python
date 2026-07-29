@@ -17,6 +17,11 @@ Google Cloud supports native OpenTelemetry Protocol (OTLP) ingestion for Cloud T
 
 Please refer to the [Migration Guide](MIGRATION.md) for detailed instructions on migrating your application to standard OpenTelemetry OTLP exporters.
 
+## Google Cloud Resource Detector
+
+The OpenTelemetry Google Cloud Resource Detector (`opentelemetry-resourcedetector-gcp`) has moved to the [opentelemetry-python-contrib](https://github.com/open-telemetry/opentelemetry-python-contrib/tree/main/resource/opentelemetry-resourcedetector-gcp) repository:
+https://github.com/open-telemetry/opentelemetry-python-contrib/tree/main/resource/opentelemetry-resourcedetector-gcp
+
 ## Documentation
 
 To learn more about instrumentation and observability, including opinionated recommendations
