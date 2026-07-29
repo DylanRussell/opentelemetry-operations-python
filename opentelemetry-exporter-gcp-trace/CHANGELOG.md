@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## Version 1.13.0
+
+Released 2026-07-29
+
+- Add deprecation warning and migration guide for OTLP exporters (#545)
+
 ## Version 1.12.0
 
 Released 2026-04-28
