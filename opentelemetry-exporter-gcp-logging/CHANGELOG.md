@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add `force_flush` method to `CloudLoggingExporter` (#559)
+
 ## Version 1.13.0a0
 
 Released 2026-07-29
