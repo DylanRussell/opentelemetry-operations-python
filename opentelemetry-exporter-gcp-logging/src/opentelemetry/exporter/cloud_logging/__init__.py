@@ -476,12 +476,13 @@ class CloudLoggingExporter(LogRecordExporter):
                     "Error while writing to Cloud Logging", exc_info=ex
                 )
 
+    # pylint: disable=unused-argument,no-self-use
     def force_flush(self, timeout_millis: float = 30_000) -> bool:
         """Flushes any buffered logs.
 
         For CloudLoggingExporter, this is a no-op as logs are exported synchronously.
         """
-        logger.info("force_flush does nothing for CloudLoggingExporter")
+        logger.debug("force_flush does nothing for CloudLoggingExporter")
         return True
 
     def shutdown(self):
