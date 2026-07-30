@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add deprecation warning to README
+- Update `opentelemetry-resourcedetector-gcp` dependency to `< 1.15`
 - Add `force_flush` method to `CloudLoggingExporter` (#559)
 
 ## Version 1.13.0a0

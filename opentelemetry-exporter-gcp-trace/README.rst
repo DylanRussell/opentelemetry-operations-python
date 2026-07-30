@@ -8,6 +8,14 @@ OpenTelemetry Google Cloud Integration
     :target: https://google-cloud-opentelemetry.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
 
+.. warning::
+
+    **This exporter is deprecated.**
+
+    Google Cloud supports native OpenTelemetry Protocol (OTLP) ingestion for Cloud Trace, Cloud Monitoring, and Cloud Logging via the `Telemetry API <https://docs.cloud.google.com/stackdriver/docs/reference/telemetry/overview>`_.
+
+    Please refer to the `Migration Guide <https://github.com/GoogleCloudPlatform/opentelemetry-operations-python/blob/main/MIGRATION.md>`_ for detailed instructions on migrating your application to standard OpenTelemetry OTLP exporters.
+
 This library provides support for exporting traces to Google Cloud Trace.
 
 To get started with instrumentation in Google Cloud, see `Generate traces and metrics with
