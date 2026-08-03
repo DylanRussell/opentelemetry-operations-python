@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## Version 1.14.0
+
+Released 2026-08-03
+
 - Add deprecation warning to README
 - Update `opentelemetry-resourcedetector-gcp` dependency to `< 1.15`
 
